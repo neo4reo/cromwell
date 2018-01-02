@@ -63,4 +63,3 @@ final case class InitialWorkDirFileGeneratorExpression(entry: IwdrListingArrayEn
     case _ => Set.empty // TODO WOM: For some cases this might need some...
   }
 }
-
