@@ -13,6 +13,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.Try
 import cats.syntax.either._
+import cwl.ExpressionEvaluator.{ECMAScriptExpression, ECMAScriptFunction}
 import mouse.all._
 
 trait CwlWomExpression extends WomExpression {
@@ -20,6 +21,16 @@ trait CwlWomExpression extends WomExpression {
   def cwlExpressionType: WomType
 
   override def evaluateType(inputTypes: Map[String, WomType]): ErrorOr[WomType] = cwlExpressionType.validNel
+
+  def expressionLib: Vector[ECMAScriptFunction]
+
+  def evaluate(inputs: Map[String, WomValue], parameterContext: ParameterContext, expression: Expression): ErrorOr[WomValue] =
+    expression.
+      fold(EvaluateExpression).
+      apply(parameterContext).
+      cata(Right(_),Left(_)). // this is because toEither is not a thing in scala 2.11.
+      leftMap(e => NonEmptyList.one(e.getMessage)).
+      toValidated
 }
 
 case class JobPreparationExpression(expression: Expression,

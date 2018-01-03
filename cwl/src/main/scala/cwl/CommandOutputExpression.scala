@@ -17,7 +17,8 @@ import mouse.all._
 
 case class CommandOutputExpression(outputBinding: CommandOutputBinding,
                                    override val cwlExpressionType: WomType,
-                                   override val inputs: Set[String]) extends CwlWomExpression {
+                                   override val inputs: Set[String],
+                                   override val expressionLib: Vector[Expression]) extends CwlWomExpression {
 
   // TODO WOM: outputBinding.toString is probably not the best representation of the expression source
   override def sourceString = outputBinding.toString

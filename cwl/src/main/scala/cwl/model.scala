@@ -8,6 +8,7 @@ import shapeless.syntax.singleton._
 import cwl.LinkMergeMethod.LinkMergeMethod
 import cwl.WorkflowStepInput.InputSource
 import common.validation.ErrorOr.ErrorOr
+import cwl.ExpressionEvaluator.ECMAScriptFunction
 import cwl.command.ParentName
 import io.circe.Json
 import wom.types.WomType
@@ -172,7 +173,14 @@ case class OutputArraySchema(
 
 case class InlineJavascriptRequirement(
   `class`: W.`"InlineJavascriptRequirement"`.T = "InlineJavascriptRequirement".narrow,
-  expressionLib: Option[Array[String]] = None)
+  expressionLib: Option[Array[ECMAScriptFunction]] = None)
+
+object InlineJavascriptRequirement {
+  def findExpressionLibs(allRequirements: List[Requirement]): Vector[ECMAScriptFunction] =
+    allRequirements.toVector.flatMap{
+      case InlineJavascriptRequirement(_, Some(expressionLib)) => expressionLib.toVector
+    }
+}
 
 case class SchemaDefRequirement(
   `class`: W.`"SchemaDefRequirement"`.T,

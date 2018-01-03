@@ -116,7 +116,10 @@ case class CommandLineTool private(
     val outputs: List[Callable.OutputDefinition] = this.outputs.map {
       case CommandOutputParameter(cop_id, _, _, _, _, _, Some(outputBinding), Some(tpe)) =>
         val womType = tpe.fold(MyriadOutputTypeToWomType)
-        OutputDefinition(FullyQualifiedName(cop_id).id, womType, CommandOutputExpression(outputBinding, womType, inputNames))
+
+        val expressionLib = InlineJavascriptRequirement.findExpressionLibs(requirementsAndHints)
+
+        OutputDefinition(FullyQualifiedName(cop_id).id, womType, CommandOutputExpression(outputBinding, womType, inputNames, expressionLib))
 
       //This catches states where the output binding is not declared but the type is
       case CommandOutputParameter(id, _, _, _, _, _, _, Some(tpe)) =>

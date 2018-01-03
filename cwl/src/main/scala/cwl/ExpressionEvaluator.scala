@@ -21,7 +21,7 @@ object ExpressionEvaluator {
   type MatchesECMAFunction = MatchesRegex[ECMAScriptFunctionWitness.T]
 
 
-  def evalExpression(expression: ECMAScriptExpression, parameterContext: ParameterContext): Try[WomValue] = {
+  def evalExpression(expression: ECMAScriptExpression, parameterContext: ParameterContext, expressionLib: Vector[ECMAScriptFunction]): Try[WomValue] = {
     val ECMAScriptExpressionRegex = ECMAScriptExpressionWitness.value.r
     expression.value match {
       case ECMAScriptExpressionRegex(script) => Try(JsUtil.eval(script, parameterContext.ecmaScriptValues))
@@ -29,18 +29,24 @@ object ExpressionEvaluator {
     }
   }
 
-  def evalFunction(function: ECMAScriptFunction, parameterContext: ParameterContext): Try[WomValue] = {
+  def evalFunction(function: ECMAScriptFunction, parameterContext: ParameterContext, expressionLib: Vector[ECMAScriptFunction]): Try[WomValue] = {
     val ECMAScriptFunctionRegex = ECMAScriptFunctionWitness.value.r
     function.value match {
       case ECMAScriptFunctionRegex(script) =>
         val functionExpression =
-          s"""|(function() {
-              |FUNCTION_BODY
-              |})();
-              |""".stripMargin.replaceAll("FUNCTION_BODY", script)
+          buildEcmaScriptFunction(script)
 
         Try(JsUtil.eval(functionExpression, parameterContext.ecmaScriptValues))
       case _ => Failure(new RuntimeException(s"Expression was unable to be matched to Regex. This is never supposed to happen thanks to our JSON parsing library"))
     }
+  }
+
+  def stripFunctionSurround(in : ECMAScriptFunction): Either[String =
+
+  private def buildEcmaScriptFunction(script: String) = {
+    s"""|(function() {
+        |FUNCTION_BODY
+        |})();
+        |""".stripMargin.replaceAll("FUNCTION_BODY", script)
   }
 }
