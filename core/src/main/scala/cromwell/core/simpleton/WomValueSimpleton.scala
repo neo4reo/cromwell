@@ -31,7 +31,7 @@ object WomValueSimpleton {
       case WomArray(_, arrayValue) => arrayValue.zipWithIndex flatMap { case (arrayItem, index) => arrayItem.simplify(s"$name[$index]") }
       case WomMap(_, mapValue) => mapValue flatMap { case (key, value) => value.simplify(s"$name:${key.valueString.escapeMeta}") }
       case WomPair(left, right) => left.simplify(s"$name:left") ++ right.simplify(s"$name:right")
-      case wdlObject: WomObjectLike => wdlObject.value flatMap { case (key, value) => value.simplify(s"$name:${key.escapeMeta}") }
+      case wdlObject: WomObjectLike => wdlObject.values flatMap { case (key, value) => value.simplify(s"$name:${key.escapeMeta}") }
       case other => throw new Exception(s"Cannot simplify wdl value $other of type ${other.womType}")
     }
   }

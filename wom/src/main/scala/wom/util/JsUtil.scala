@@ -85,6 +85,9 @@ object JsUtil {
         map.map({
           case (mapKey, mapValue) => toJavascript(mapKey) -> toJavascript(mapValue)
         }).asJava
+      case objectLike: WomObjectLike => objectLike.values.map({
+        case (key, innerValue) => key -> toJavascript(innerValue)
+      }).asJava
       case _ => throw new IllegalArgumentException(s"Unexpected value: $value")
     }
   }

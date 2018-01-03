@@ -35,7 +35,7 @@ trait TypeAliases {
       CwlAny :+:
       CNil
 
-  // TODO WOM: Record Schema as well as Directories are not included because they're not supported yet, although they should eventually be.
+  // TODO WOM: Directories are not included because they're not supported yet, although they should eventually be.
   // Removing them saves some compile time when building decoders for this type (in CwlInputParsing)
   type MyriadInputValuePrimitives = 
     String :+:
@@ -50,6 +50,7 @@ trait TypeAliases {
   type MyriadInputValue =
     MyriadInputValuePrimitives :+:
       Array[MyriadInputValuePrimitives] :+:
+      Map[String, MyriadInputValuePrimitives] :+:
       CNil
 
   type MyriadInputType =

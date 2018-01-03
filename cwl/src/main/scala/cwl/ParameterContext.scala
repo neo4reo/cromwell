@@ -1,26 +1,26 @@
 package cwl
 
 import wom.expression.IoFunctionSet
-import wom.types.{WomMapType, WomNothingType, WomStringType}
-import wom.values.{WomMap, WomOptionalValue, WomSingleFile, WomString, WomValue}
+import wom.types._
+import wom.values.{WomObject, WomOptionalValue, WomSingleFile, WomString, WomValue}
 
 object ParameterContext {
   val Empty = ParameterContext()
 }
 
-case class ParameterContext(inputs: WomValue = WomOptionalValue(WomNothingType, None),
-                            self: WomValue = WomOptionalValue(WomNothingType, None),
-                            runtime: WomValue = WomOptionalValue(WomNothingType, None)) {
+case class ParameterContext(inputs: WomValue = WomOptionalValue.none(WomNothingType),
+                            self: WomValue =WomOptionalValue.none(WomNothingType),
+                            runtime: WomValue = WomOptionalValue.none(WomNothingType)) {
   def withInputs(inputValues: Map[String, WomValue], ioFunctionSet: IoFunctionSet): ParameterContext = {
-    val womValueType = WomStringType
+    val compositeType = WomCompositeType(inputValues map { case (name, value) => name -> value.womType })
     copy(
-      inputs = WomMap(
-        WomMapType(WomStringType, womValueType),
+      inputs = WomObject.withType(
         // TODO: WOM: convert inputValues (including WomFile?) to inputs using the ioFunctionSet
         inputValues map {
-          case (name, WomSingleFile(path)) => WomString(name) -> WomString(path)
-          case (name, womValue) => WomString(name) -> womValue
-        }
+          case (name, WomSingleFile(path)) => name -> WomString(path)
+          case (name, womValue) => name -> womValue
+        },
+        compositeType
       )
     )
   }

@@ -5,6 +5,7 @@ import common.validation.ErrorOr.ErrorOr
 import common.validation.Validation._
 import common.validation.ErrorOr.ShortCircuitingFlatMap
 import cats.syntax.validated._
+import cwl.CommandLineTool.CommandOutputParameter
 import cwl.InitialWorkDirRequirement.IwdrListingArrayEntry
 import cwl.WorkflowStepInput.InputSource
 import cwl.command.ParentName
@@ -40,27 +41,32 @@ case class JobPreparationExpression(expression: Expression,
   override def evaluateFiles(inputTypes: Map[String, WomValue], ioFunctionSet: IoFunctionSet, coerceTo: WomType) = Set.empty[WomFile].validNel
 }
 
-case class CommandOutputExpression(outputBinding: CommandOutputBinding,
-                                   override val cwlExpressionType: WomType,
-                                   override val inputs: Set[String]) extends CwlWomExpression {
+case class CommandOutputParameterExpression(parameter: CommandOutputParameter,
+                                          override val cwlExpressionType: WomType,
+                                          override val inputs: Set[String]) extends CwlWomExpression {
 
   // TODO WOM: outputBinding.toString is probably not be the best representation of the outputBinding
-  override def sourceString = outputBinding.toString
+  override def sourceString = parameter.toString
 
-  override def evaluateValue(inputValues: Map[String, WomValue], ioFunctionSet: IoFunctionSet): ErrorOr[WomValue] = {
+  def evaluateOutputBinding(inputValues: Map[String, WomValue],
+                            ioFunctionSet: IoFunctionSet)(
+                             outputBinding: CommandOutputBinding,
+                             womType: WomType) = {
+    import common.validation.Validation._
+
     val parameterContext = ParameterContext.Empty.withInputs(inputValues, ioFunctionSet)
 
     //To facilitate ECMAScript evaluation, filenames are stored in a map under the key "location"
     val womValue = outputBinding.
       commandOutputBindingToWomValue(parameterContext, ioFunctionSet) match {
-        case WomArray(_, Seq(WomMap(WomMapType(WomStringType, WomStringType), map))) => map(WomString("location"))
-        case other => other
-      }
+      case WomArray(_, Seq(WomMap(WomMapType(WomStringType, WomStringType), map))) => map(WomString("location"))
+      case other => other
+    }
 
     //If the value is a string but the output is expecting a file, we consider that string a POSIX "glob" and apply
     //it accordingly to retrieve the file list to which it expands.
     val globbedIfFile =
-      (womValue, cwlExpressionType) match {
+    (womValue, womType) match {
 
         //In the case of a single file being expected, we must enforce that the glob only represents a single file
         case (WomString(glob), WomSingleFileType) =>
@@ -69,11 +75,21 @@ case class CommandOutputExpression(outputBinding: CommandOutputBinding,
             case list => throw new RuntimeException(s"expecting a single File glob but instead got $list")
           }
 
-        case _ => womValue
-      }
+      case _ => womValue
+    }
 
     //CWL tells us the type this output is expected to be.  Attempt to coerce the actual output into this type.
-    cwlExpressionType.coerceRawValue(globbedIfFile).toErrorOr
+    womType.coerceRawValue(globbedIfFile).toErrorOr
+  }
+
+  override def evaluateValue(inputValues: Map[String, WomValue], ioFunctionSet: IoFunctionSet): ErrorOr[WomValue] = {
+    def fromOutputBinding =
+      parameter.outputBinding.map(evaluateOutputBinding(inputValues, ioFunctionSet)(_, cwlExpressionType))
+
+    def fromType =
+      parameter.`type`.map(_.fold(MyriadOutputTypeToWomValue).apply(evaluateOutputBinding(inputValues, ioFunctionSet)))
+
+    fromOutputBinding.orElse(fromType).getOrElse(s"Cannot evaluate ${parameter.toString}".invalidNel)
   }
 
   /*
@@ -86,7 +102,7 @@ case class CommandOutputExpression(outputBinding: CommandOutputBinding,
     val pc = ParameterContext().withInputs(inputs, ioFunctionSet)
 
     val files = for {
-      globValue <- outputBinding.glob.toList
+      globValue <- parameter.outputBinding.toList.flatMap(_.glob) ++ parameter.`type`.toList.flatMap(_.fold(MyriadOutputTypeToGlob))
       path <- GlobEvaluator.globPaths(globValue, pc, ioFunctionSet).toList
     } yield WomGlobFile(path): WomFile
 

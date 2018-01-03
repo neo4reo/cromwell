@@ -2,6 +2,7 @@ package cwl
 
 import cats.data.Validated.Valid
 import cats.implicits._
+import cwl.CommandLineTool.CommandOutputParameter
 import cwl.CommandOutputBinding.Glob
 import cwl.ExpressionEvaluator._
 import eu.timepit.refined._
@@ -37,7 +38,8 @@ class CommandOutputExpressionSpec extends FlatSpec with Matchers {
     val glob = Coproduct[Glob](globExpression)
     val outputEval = Coproduct[StringOrExpression](outputEvalExpression)
     val outputBinding = CommandOutputBinding(Option(glob), Option(true), Option(outputEval))
-    val commandOutputExpression = CommandOutputExpression(outputBinding, WomIntegerType, Set.empty)
+    val commandOutputParameter = CommandOutputParameter("id", outputBinding = Option(outputBinding))
+    val commandOutputExpression = CommandOutputParameterExpression(commandOutputParameter, WomIntegerType, Set.empty)
     val inputValues = Map("myTempFile" -> WomString(tempFile.pathAsString))
     val result = commandOutputExpression.evaluateValue(inputValues, ioFunctionSet(data))
     result should be(WomInteger(42).valid)
@@ -46,7 +48,8 @@ class CommandOutputExpressionSpec extends FlatSpec with Matchers {
   it should "figure out stdout" in {
     val glob = Coproduct[Glob]("stdout")
     val outputBinding = CommandOutputBinding(Option(glob))
-    val commandOutputExpression = CommandOutputExpression(outputBinding, WomIntegerType, Set.empty)
+    val commandOutputParameter = CommandOutputParameter("id", outputBinding = Option(outputBinding))
+    val commandOutputExpression = CommandOutputParameterExpression(commandOutputParameter, WomIntegerType, Set.empty)
     val result = commandOutputExpression.evaluateFiles(Map.empty, PlaceholderIoFunctionSet, WomIntegerType)
     result shouldBe Valid(Set(WomGlobFile("stdout")))
   }
