@@ -18,7 +18,7 @@ case class ParameterContext(inputs: WomValue = WomOptionalValue(WomNothingType, 
         WomMapType(WomStringType, womValueType),
         // TODO: WOM: convert inputValues (including WomFile?) to inputs using the ioFunctionSet
         inputValues map {
-          case (name, WomSingleFile(path)) => WomString(name) -> WomString(path)
+          case (name, womSingleFile: WomSingleFile) => WomString(name) -> WomString(womSingleFile.value)
           case (name, womValue) => WomString(name) -> womValue
         }
       )

@@ -117,6 +117,9 @@ final case class TesTask(jobDescriptor: BackendJobDescriptor,
   private val womOutputs = outputWomFiles
     .zipWithIndex
     .flatMap {
+      case (_: WomSingleDirectory, _) =>
+        // TODO: WOM: WOMFILE: Add support for directories.
+        throw new NotImplementedError("Directories are not supported yet.")
       case (f: WomSingleFile, index) =>
         val outputFile = f.value
         Seq(

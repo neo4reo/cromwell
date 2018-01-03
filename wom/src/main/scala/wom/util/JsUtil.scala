@@ -24,7 +24,7 @@ object JsUtil {
     *
     * The WomMap keys and values, and WomArray elements must be the one of the above, recursively.
     *
-    * WomSingleFile and WomGlobFile are not permitted, and must be already converted to one of the above types.
+    * WomFile are not permitted, and must be already converted to one of the above types.
     *
     * @param expr   The javascript expression.
     * @param values A map filled with WOM values.
@@ -72,6 +72,25 @@ object JsUtil {
     }
   }
 
+  /**
+    * Converts a WomPrimitive (except WomFile) into a javascript compatible value.
+    *
+    * Inputs, and returned output must be one of:
+    * - WomString
+    * - WomBoolean
+    * - WomFloat
+    * - WomInteger
+    * - WomMap
+    * - WomArray
+    * - A "WomNull" equal to WomOptionalValue(WomNothingType, None)
+    *
+    * The WomMap keys and values, and WomArray elements must be the one of the above, recursively.
+    *
+    * WomFile are not permitted, and must be already converted to one of the above types.
+    *
+    * @param value A WOM value.
+    * @return The javascript equivalent.
+    */
   private def toJavascript(value: WomValue): AnyRef = {
     value match {
       case WomOptionalValue(WomNothingType, None) => null
@@ -80,7 +99,6 @@ object JsUtil {
       case WomFloat(double) => double.asInstanceOf[java.lang.Double]
       case WomBoolean(boolean) => boolean.asInstanceOf[java.lang.Boolean]
       case WomArray(_, array) => array.map(toJavascript).toArray
-      case WomSingleFile(path) => path
       case WomMap(_, map) =>
         map.map({
           case (mapKey, mapValue) => toJavascript(mapKey) -> toJavascript(mapValue)

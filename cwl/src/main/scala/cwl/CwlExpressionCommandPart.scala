@@ -12,8 +12,8 @@ import wom.graph.LocalName
 import wom.values._
 import wom.{CommandPart, InstantiatedCommand}
 
-import scala.util.Try
 import scala.language.postfixOps
+import scala.util.Try
 
 case class CwlExpressionCommandPart(expr: Expression) extends CommandPart {
   override def instantiate(inputsMap: Map[LocalName, WomValue],
