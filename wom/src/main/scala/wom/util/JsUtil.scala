@@ -85,7 +85,7 @@ object JsUtil {
         map.map({
           case (mapKey, mapValue) => toJavascript(mapKey) -> toJavascript(mapValue)
         }).asJava
-      case _ => throw new IllegalArgumentException(s"Unexpected value: $value")
+      case _ => throw new IllegalArgumentException(s"Unexpected ${value.getClass.getSimpleName} value: $value")
     }
   }
 
@@ -117,7 +117,11 @@ object JsUtil {
         WomMap(womMapType, keys.map(key =>
           WomString(key) -> fromJavascript(scriptObjectMirror.get(key))
         ).toMap)
-      case _ => throw new IllegalArgumentException(s"Unexpected value: $value")
+      case array: Array[Object] =>
+        val values = array map fromJavascript
+        WomArray(values)
+
+      case _ => throw new IllegalArgumentException(s"Unexpected ${value.getClass.getSimpleName} value: $value")
     }
   }
 }

@@ -9,7 +9,7 @@ import cwl.CommandLineTool._
 import cwl.CwlType.CwlType
 import cwl.CwlVersion._
 import cwl.command.ParentName
-import cwl.CwlAny.EnhancedCwlAny
+import cwl.CwlAny.EnhancedJson
 import cwl.requirement.RequirementToAttributeMap
 import eu.timepit.refined.W
 import shapeless.syntax.singleton._
@@ -129,10 +129,10 @@ case class CommandLineTool private(
 
     val inputDefinitions: List[_ <: Callable.InputDefinition] =
       this.inputs.map {
-        case CommandInputParameter(id, _, _, _, _, _, _, Some(default), Some(tpe)) =>
+        case CommandInputParameter(id, _, _, _, _, _, _, Some(CwlAny.Json(default)), Some(tpe)) =>
           val inputType = tpe.fold(MyriadInputTypeToWomType)
           val inputName = FullyQualifiedName(id).id
-          InputDefinitionWithDefault(inputName, inputType, ValueAsAnExpression(inputType.coerceRawValue(default.stringRepresentation).get))
+          InputDefinitionWithDefault(inputName, inputType, ValueAsAnExpression(inputType.coerceRawValue(default.sprayJsonRepresentation).get))
         case CommandInputParameter(id, _, _, _, _, _, _, None, Some(tpe)) =>
           val inputType = tpe.fold(MyriadInputTypeToWomType)
           val inputName = FullyQualifiedName(id).id

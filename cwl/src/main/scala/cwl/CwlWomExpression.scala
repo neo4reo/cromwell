@@ -5,6 +5,8 @@ import common.validation.ErrorOr.ErrorOr
 import common.validation.Validation._
 import common.validation.ErrorOr.ShortCircuitingFlatMap
 import cats.syntax.validated._
+import cats.syntax.traverse._
+import cats.instances.list._
 import cwl.InitialWorkDirRequirement.IwdrListingArrayEntry
 import cwl.WorkflowStepInput.InputSource
 import cwl.command.ParentName
@@ -121,10 +123,15 @@ final case class InitialWorkDirFileGeneratorExpression(entry: IwdrListingArrayEn
   override def cwlExpressionType: WomType = WomSingleFileType
   override def sourceString: String = entry.toString
 
-  override def evaluateValue(inputValues: Map[String, WomValue], ioFunctionSet: IoFunctionSet): ErrorOr[WomFile] = {
+  override def evaluateValue(inputValues: Map[String, WomValue], ioFunctionSet: IoFunctionSet): ErrorOr[WomValue] = {
     def mustBeString(womValue: WomValue): ErrorOr[String] = womValue match {
       case WomString(s) => s.validNel
       case other => WomStringType.coerceRawValue(other).map(_.asInstanceOf[WomString].value).toErrorOr
+    }
+
+    def mustBeFileArray(womValue: WomValue): ErrorOr[Seq[WomFile]] = womValue match {
+      case WomArray(WomArrayType(WomSingleFileType), value) => value.collect({case f: WomFile => f}).validNel
+      case other => WomArrayType(WomSingleFileType).coerceRawValue(other).map(_.asInstanceOf[WomArray]).toErrorOr.flatMap(mustBeFileArray)
     }
 
     def evaluateEntryName(stringOrExpression: StringOrExpression): ErrorOr[String] = stringOrExpression match {
@@ -144,8 +151,12 @@ final case class InitialWorkDirFileGeneratorExpression(entry: IwdrListingArrayEn
       case IwdrListingArrayEntry.ExpressionDirent(Expression.ECMAScriptExpression(contentExpression), direntEntryName, _) =>
         val entryEvaluation: ErrorOr[WomValue] = ExpressionEvaluator.evalExpression(contentExpression, ParameterContext().withInputs(inputValues, ioFunctionSet)).toErrorOr
         entryEvaluation flatMap {
-          // TODO CWL: Once files have "local paths", we will be able to specify a new local name based on direntEntryName if necessary.
-          case f: WomFile => f.validNel
+          case f: WomFile =>
+            val entryName: ErrorOr[String] = direntEntryName match {
+              case Some(en) => evaluateEntryName(en)
+              case None => f.value.split('/').last.validNel
+            }
+            entryName flatMap { en => Try(Await.result(ioFunctionSet.copyFile(f.value, en), Duration.Inf)).toErrorOr }
           case other => for {
             coerced <- WomStringType.coerceRawValue(other).toErrorOr
             contentString = coerced.asInstanceOf[WomString].value
@@ -154,6 +165,20 @@ final case class InitialWorkDirFileGeneratorExpression(entry: IwdrListingArrayEn
             entryname <- evaluateEntryName(entryNameUnoptioned)
             writtenFile <- Try(Await.result(ioFunctionSet.writeFile(entryname, contentString), Duration.Inf)).toErrorOr
           }  yield writtenFile
+        }
+      case IwdrListingArrayEntry.ECMAScriptExpression(expression) =>
+        // A single expression which must evaluate to an array of Files
+        val expressionEvaluation: ErrorOr[WomValue] = ExpressionEvaluator.evalExpression(expression, ParameterContext().withInputs(inputValues, ioFunctionSet)).toErrorOr
+
+        expressionEvaluation flatMap {
+          case array: WomArray if WomArrayType(WomSingleFileType).coercionDefined(array) =>
+            val newFileArray: ErrorOr[List[WomFile]] = array.value.map(_.valueString).toList.traverse { source: String =>
+              val dest = source.split('/').last
+              Try(Await.result(ioFunctionSet.copyFile(source, dest), Duration.Inf)).toErrorOr
+            }
+            newFileArray map { nfa => WomArray(WomArrayType(WomSingleFileType), nfa) }
+
+          case other => s"InitialWorkDirRequirement listing expression must be Array[File] but got ${other.womType.toDisplayString}".invalidNel
         }
 
       case _ => ??? // TODO WOM and the rest....

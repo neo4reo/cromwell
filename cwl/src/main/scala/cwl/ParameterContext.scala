@@ -1,7 +1,7 @@
 package cwl
 
 import wom.expression.IoFunctionSet
-import wom.types.{WomMapType, WomNothingType, WomStringType}
+import wom.types.{WomMapType, WomNothingType, WomStringType, WomType}
 import wom.values.{WomMap, WomOptionalValue, WomSingleFile, WomString, WomValue}
 
 object ParameterContext {
@@ -12,7 +12,7 @@ case class ParameterContext(inputs: WomValue = WomOptionalValue(WomNothingType, 
                             self: WomValue = WomOptionalValue(WomNothingType, None),
                             runtime: WomValue = WomOptionalValue(WomNothingType, None)) {
   def withInputs(inputValues: Map[String, WomValue], ioFunctionSet: IoFunctionSet): ParameterContext = {
-    val womValueType = WomStringType
+    val womValueType = WomType.homogeneousTypeFromValues(inputValues.values)
     copy(
       inputs = WomMap(
         WomMapType(WomStringType, womValueType),
