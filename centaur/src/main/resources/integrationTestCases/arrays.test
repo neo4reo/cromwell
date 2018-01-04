@@ -1,6 +1,5 @@
 name: arrays
 testFormat: workflowsuccess
-ignore: true
 
 files {
   wdl: green/arrays/arrays.wdl
