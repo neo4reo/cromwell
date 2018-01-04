@@ -1,5 +1,6 @@
 name: jointdiscovery
 testFormat: workflowsuccess
+ignore: true
 
 files {
   wdl: germline/joint-discovery-gatk/joint-discovery-gatk4.wdl

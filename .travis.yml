@@ -57,4 +57,3 @@ notifications:
     on_success: change
     on_failure: change
     on_pull_requests: false
-install: travis_wait 30 mvn install
