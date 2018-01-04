@@ -350,7 +350,7 @@ workflow PairedEndSingleSampleWorkflow {
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index,
       wgs_coverage_interval_list = wgs_coverage_interval_list,
-      read_length = select_first([read_length, 250]),
+      read_length = read_length,
       disk_size = binned_qual_bam_size + ref_size + additional_disk,
       preemptible_tries = agg_preemptible_tries
   }
@@ -364,7 +364,7 @@ workflow PairedEndSingleSampleWorkflow {
       ref_fasta = ref_fasta,
       ref_fasta_index = ref_fasta_index,
       wgs_coverage_interval_list = wgs_coverage_interval_list,
-      read_length = select_first([read_length, 250]),
+      read_length = read_length,
       disk_size = binned_qual_bam_size + ref_size + additional_disk,
       preemptible_tries = agg_preemptible_tries
   }
@@ -1223,7 +1223,7 @@ task CollectWgsMetrics {
   File wgs_coverage_interval_list
   File ref_fasta
   File ref_fasta_index
-  Int read_length = 250
+  Int? read_length
   Float disk_size
   Int preemptible_tries
 
@@ -1237,7 +1237,7 @@ task CollectWgsMetrics {
       INTERVALS=${wgs_coverage_interval_list} \
       OUTPUT=${metrics_filename} \
       USE_FAST_ALGORITHM=true \
-      READ_LENGTH=${read_length}
+      READ_LENGTH=${default=250 read_length}
   }
   runtime {
     preemptible: preemptible_tries
@@ -1257,7 +1257,7 @@ task CollectRawWgsMetrics {
   File wgs_coverage_interval_list
   File ref_fasta
   File ref_fasta_index
-  Int read_length
+  Int? read_length
   Float disk_size
   Int preemptible_tries
 
@@ -1271,7 +1271,7 @@ task CollectRawWgsMetrics {
       INTERVALS=${wgs_coverage_interval_list} \
       OUTPUT=${metrics_filename} \
       USE_FAST_ALGORITHM=true \
-      READ_LENGTH=${read_length}
+      READ_LENGTH=${default=250 read_length}
   }
   runtime {
     preemptible: preemptible_tries
