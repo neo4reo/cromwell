@@ -181,7 +181,7 @@ final case class InitialWorkDirFileGeneratorExpression(entry: IwdrListingArrayEn
           case other => s"InitialWorkDirRequirement listing expression must be Array[File] but got ${other.womType.toDisplayString}".invalidNel
         }
 
-      case _ => ??? // TODO WOM and the rest....
+      case _ => ??? // TODO CWL and the rest....
     }
   }
 
