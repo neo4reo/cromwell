@@ -5,7 +5,7 @@ trait WomPrimitiveType extends WomType {
     // From type -> To type
     WomAnyType -> Seq(WomStringType, WomIntegerType, WomFloatType, WomSingleFileType, WomBooleanType),
     WomStringType -> Seq(WomStringType, WomIntegerType, WomFloatType, WomSingleFileType, WomBooleanType),
-    WomSingleDirectoryType -> Seq(WomStringType, WomSingleDirectoryType),
+    WomUnlistedDirectoryType -> Seq(WomStringType, WomUnlistedDirectoryType),
     WomSingleFileType -> Seq(WomStringType, WomSingleFileType),
     WomGlobFileType -> Seq(WomStringType, WomGlobFileType),
     WomIntegerType -> Seq(WomStringType, WomIntegerType, WomFloatType),

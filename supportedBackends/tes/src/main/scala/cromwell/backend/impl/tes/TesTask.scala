@@ -117,9 +117,6 @@ final case class TesTask(jobDescriptor: BackendJobDescriptor,
   private val womOutputs = outputWomFiles
     .zipWithIndex
     .flatMap {
-      case (_: WomSingleDirectory, _) =>
-        // TODO: WOM: WOMFILE: Add support for directories.
-        throw new NotImplementedError("Directories are not supported yet.")
       case (f: WomSingleFile, index) =>
         val outputFile = f.value
         Seq(
@@ -153,6 +150,9 @@ final case class TesTask(jobDescriptor: BackendJobDescriptor,
             `type` = Option("FILE")
           )
         )
+      case (unsupported: WomFile, _) =>
+        // TODO: WOM: WOMFILE: Add support for directories.
+        throw new NotImplementedError(s"$unsupported is not supported yet.")
     }
 
   val outputs: Seq[Output] = womOutputs ++ standardOutputs ++ Seq(commandScriptOut)

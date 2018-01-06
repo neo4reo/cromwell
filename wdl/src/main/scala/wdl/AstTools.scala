@@ -111,8 +111,8 @@ object AstTools {
       astNode match {
         case t: Terminal =>
           t.getSourceString match {
+            case WomUnlistedDirectoryType.`toDisplayString` => WomUnlistedDirectoryType
             case WomSingleFileType.`toDisplayString` => WomSingleFileType
-            case WomSingleDirectoryType.`toDisplayString` => WomSingleDirectoryType
             case WomStringType.`toDisplayString` => WomStringType
             case WomIntegerType.`toDisplayString` => WomIntegerType
             case WomFloatType.`toDisplayString` => WomFloatType
@@ -198,8 +198,8 @@ object AstTools {
 
       astNode match {
         case t: Terminal if t.getTerminalStr == "string" && womType == WomStringType => WomString(t.getSourceString)
-        case t: Terminal if t.getTerminalStr == "string" && womType == WomSingleDirectoryType =>
-          WomSingleDirectory(t.getSourceString)
+        case t: Terminal if t.getTerminalStr == "string" && womType == WomUnlistedDirectoryType =>
+          WomUnlistedDirectory(t.getSourceString)
         case t: Terminal if t.getTerminalStr == "string" && womType == WomSingleFileType =>
           WomSingleFile(t.getSourceString)
         case t: Terminal if t.getTerminalStr == "string" && womType == WomGlobFileType =>

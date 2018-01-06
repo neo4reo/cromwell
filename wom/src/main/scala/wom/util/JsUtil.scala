@@ -24,7 +24,7 @@ object JsUtil {
     *
     * The WomMap keys and values, and WomArray elements must be the one of the above, recursively.
     *
-    * WomFile are not permitted, and must be already converted to one of the above types.
+    * Instances of WomFile are not permitted, and must be already converted to one of the above types.
     *
     * @param expr   The javascript expression.
     * @param values A map filled with WOM values.
@@ -86,7 +86,7 @@ object JsUtil {
     *
     * The WomMap keys and values, and WomArray elements must be the one of the above, recursively.
     *
-    * WomFile are not permitted, and must be already converted to one of the above types.
+    * Instances of WomFile are not permitted, and must be already converted to one of the above types.
     *
     * @param value A WOM value.
     * @return The javascript equivalent.

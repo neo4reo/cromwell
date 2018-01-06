@@ -171,8 +171,7 @@ class JesAsyncBackendJobExecutionActor(override val standardParams: StandardAsyn
     // md5's of their paths.
     val writeFunctionFiles = instantiatedCommand.createdFiles map { f => f.file.value.md5SumShort -> List(f) } toMap
 
-    def localizationPath(f: CommandSetupSideEffectFile) =
-      f.relativeLocalPath.fold(ifEmpty = relativeLocalizationPath(f.file))(WomSingleFile(_))
+    def localizationPath(f: CommandSetupSideEffectFile) = f.relativeLocalPath.fold(ifEmpty = relativeLocalizationPath(f.file))(WomSingleFile)
     val writeFunctionInputs = writeFunctionFiles flatMap {
       case (name, files) => jesInputsFromWomFiles(name, files.map(_.file), files.map(localizationPath), jobDescriptor)
     }
@@ -231,11 +230,11 @@ class JesAsyncBackendJobExecutionActor(override val standardParams: StandardAsyn
 
     val outputs = womFileOutputs.distinct flatMap { womFile =>
       womFile match {
-        case _: WomSingleDirectory =>
-          // TODO: WOM: WOMFILE: Add support for directories.
-          throw new NotImplementedError("Directories are not supported yet.")
         case singleFile: WomSingleFile => List(generateJesSingleFileOutputs(singleFile))
         case globFile: WomGlobFile => generateJesGlobFileOutputs(globFile)
+        case unsupported: WomFile =>
+          // TODO: WOM: WOMFILE: Add support for directories.
+          throw new NotImplementedError(s"$unsupported is not supported yet.")
       }
     }
 
