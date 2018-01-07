@@ -75,7 +75,7 @@ object ExpressionNode {
 
     import common.validation.ErrorOr.ShortCircuitingFlatMap
     for {
-      linkedInputList <- expression.inputs.toList traverse linkInput
+      linkedInputList <- expression.inputNames.toList traverse linkInput
       linkedInputs = linkedInputList.toMap
       inputTypes = linkedInputs map { case (k, v) => k -> v.womType }
       evaluatedType <- expression.evaluateType(inputTypes)

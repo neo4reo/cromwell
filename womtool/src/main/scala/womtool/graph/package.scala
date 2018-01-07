@@ -31,7 +31,7 @@ package object graph {
       case gin: GraphInputNode => s"${gin.womType.toDisplayString} ${gin.localName}"
       case gon: GraphOutputNode => s"${gon.womType.toDisplayString} ${gon.localName}"
       case expr: ExpressionNode =>
-        val inputNames = expr.womExpression.inputs.mkString(", ")
+        val inputNames = expr.womExpression.inputNames.mkString(", ")
         s"${expr.womType.toDisplayString} ${expr.localName} = f($inputNames)"
       case other =>
         throw new Exception(s"womgraph can't find a graphName for GraphNodes of type: ${other.getClass.getSimpleName}")

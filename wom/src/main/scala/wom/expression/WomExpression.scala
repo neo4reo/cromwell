@@ -11,7 +11,7 @@ import scala.util.Try
 
 trait WomExpression {
   def sourceString: String
-  def inputs: Set[String]
+  def inputNames: Set[String]
   def evaluateValue(inputValues: Map[String, WomValue], ioFunctionSet: IoFunctionSet): ErrorOr[WomValue]
   def evaluateType(inputTypes: Map[String, WomType]): ErrorOr[WomType]
   def evaluateFiles(inputTypes: Map[String, WomValue], ioFunctionSet: IoFunctionSet, coerceTo: WomType): ErrorOr[Set[WomFile]]
@@ -25,7 +25,7 @@ final case class ValueAsAnExpression(value: WomValue) extends WomExpression {
   override def evaluateValue(inputValues: Map[String, WomValue], ioFunctionSet: IoFunctionSet): ErrorOr[WomValue] = Valid(value)
   override def evaluateType(inputTypes: Map[String, WomType]): ErrorOr[WomType] = Valid(value.womType)
   override def evaluateFiles(inputTypes: Map[String, WomValue], ioFunctionSet: IoFunctionSet, coerceTo: WomType): ErrorOr[Set[WomFile]] = Valid(Set.empty)
-  override val inputs: Set[String] = Set.empty
+  override val inputNames: Set[String] = Set.empty
 }
 
 // TODO: Flesh this out (https://github.com/broadinstitute/cromwell/issues/2521)
@@ -56,5 +56,5 @@ case class InputLookupExpression(tpe: WomType, id: String) extends WomExpression
       case _ => Set.empty
     }
 
-  override def inputs: Set[String] = Set(id)
+  override def inputNames: Set[String] = Set(id)
 }

@@ -9,10 +9,10 @@ import wom.values.{WomFile, WomValue}
 import scala.concurrent.Future
 import scala.util.Try
 
-final case class PlaceholderWomExpression(inputs: Set[String], fixedWomType: WomType) extends WomExpression {
+final case class PlaceholderWomExpression(inputNames: Set[String], fixedWomType: WomType) extends WomExpression {
   override def sourceString: String = "placeholder"
   override def evaluateValue(inputValues: Map[String, WomValue], ioFunctionSet: IoFunctionSet): ErrorOr[WomValue] =
-    Invalid(NonEmptyList.one(s"couldn't evaluate value from inputs $inputs\tfixedWomType\t$fixedWomType\tinputValues\t$inputValues"))
+    Invalid(NonEmptyList.one(s"couldn't evaluate value from inputs $inputNames\tfixedWomType\t$fixedWomType\tinputValues\t$inputValues"))
   override def evaluateType(inputTypes: Map[String, WomType]): ErrorOr[WomType] =
     Valid(fixedWomType)
   override def evaluateFiles(inputValues: Map[String, WomValue], ioFunctionSet: IoFunctionSet, coerceTo: WomType): ErrorOr[Set[WomFile]] =

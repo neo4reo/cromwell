@@ -21,7 +21,7 @@ class OutputEvaluatorSpec extends FlatSpec with Matchers with Mockito {
   // Depends on an input
   def o1Expression = new WomExpression {
     override def sourceString: String = "o1"
-    override def inputs: Set[String] = Set("input")
+    override def inputNames: Set[String] = Set("input")
     override def evaluateValue(inputValues: Map[String, WomValue], ioFunctionSet: IoFunctionSet): ErrorOr[WomValue] = {
       Validated.fromOption(inputValues.get("input"), NonEmptyList.one("Can't find a value for 'input'"))
     }
@@ -32,7 +32,7 @@ class OutputEvaluatorSpec extends FlatSpec with Matchers with Mockito {
   // Depends on a previous output
   def o2Expression = new WomExpression {
     override def sourceString: String = "o2"
-    override def inputs: Set[String] = Set("o1")
+    override def inputNames: Set[String] = Set("o1")
     override def evaluateValue(inputValues: Map[String, WomValue], ioFunctionSet: IoFunctionSet): ErrorOr[WomValue] = {
       Validated.fromOption(inputValues.get("o1"), NonEmptyList.one("Can't find a value for 'o1'"))
     }
@@ -42,7 +42,7 @@ class OutputEvaluatorSpec extends FlatSpec with Matchers with Mockito {
 
   def invalidWomExpression1 = new WomExpression {
     override def sourceString: String = "invalid1"
-    override def inputs: Set[String] = Set.empty
+    override def inputNames: Set[String] = Set.empty
     override def evaluateValue(inputValues: Map[String, WomValue], ioFunctionSet: IoFunctionSet): ErrorOr[WomValue] = {
       "Invalid expression 1".invalidNel
     }
@@ -56,7 +56,7 @@ class OutputEvaluatorSpec extends FlatSpec with Matchers with Mockito {
 
   def invalidWomExpression2 = new WomExpression {
     override def sourceString: String = "invalid2"
-    override def inputs: Set[String] = Set.empty
+    override def inputNames: Set[String] = Set.empty
     override def evaluateValue(inputValues: Map[String, WomValue], ioFunctionSet: IoFunctionSet): ErrorOr[WomValue] = {
       "Invalid expression 2".invalidNel
     }
@@ -72,7 +72,7 @@ class OutputEvaluatorSpec extends FlatSpec with Matchers with Mockito {
   
   def throwingWomExpression = new WomExpression {
     override def sourceString: String = "throwing"
-    override def inputs: Set[String] = Set.empty
+    override def inputNames: Set[String] = Set.empty
     override def evaluateValue(inputValues: Map[String, WomValue], ioFunctionSet: IoFunctionSet): ErrorOr[WomValue] = {
       throw exception
     }

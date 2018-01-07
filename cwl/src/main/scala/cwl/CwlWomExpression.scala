@@ -24,7 +24,7 @@ sealed trait CwlWomExpression extends WomExpression {
 }
 
 case class JobPreparationExpression(expression: Expression,
-                                    override val inputs: Set[String]) extends CwlWomExpression {
+                                    override val inputNames: Set[String]) extends CwlWomExpression {
   val cwlExpressionType = WomAnyType
 
   override def sourceString = expression match {
@@ -42,7 +42,7 @@ case class JobPreparationExpression(expression: Expression,
 
 case class CommandOutputExpression(outputBinding: CommandOutputBinding,
                                    override val cwlExpressionType: WomType,
-                                   override val inputs: Set[String]) extends CwlWomExpression {
+                                   override val inputNames: Set[String]) extends CwlWomExpression {
 
   // TODO WOM: outputBinding.toString is probably not be the best representation of the outputBinding
   override def sourceString = outputBinding.toString
@@ -111,7 +111,7 @@ final case class WorkflowStepInputExpression(input: WorkflowStepInput, override 
   override def evaluateFiles(inputTypes: Map[String, WomValue], ioFunctionSet: IoFunctionSet, coerceTo: WomType) =
     "Programmer error: Shouldn't use WorkflowStepInputExpressions to find output files. You silly goose.".invalidNel
 
-  override def inputs = graphInputs ++ input.source.toSet.flatMap{ inputSource: InputSource => inputSource match {
+  override def inputNames = graphInputs ++ input.source.toSet.flatMap{ inputSource: InputSource => inputSource match {
     case WorkflowStepInputSource.String(s) => Set(FullyQualifiedName(s).id)
     case WorkflowStepInputSource.StringArray(sa) => sa.map(FullyQualifiedName(_).id).toSet
   }}
@@ -167,5 +167,5 @@ final case class InitialWorkDirFileGeneratorExpression(entry: IwdrListingArrayEn
   /**
     * We already get all of the task inputs when evaluating, and we don't need to highlight anything else
     */
-  override def inputs: Set[String] = Set.empty
+  override def inputNames: Set[String] = Set.empty
 }
