@@ -116,31 +116,31 @@ case class CommandLineTool private(
       secondaryFiles
      */
 
-    val outputs: List[Callable.OutputDefinition] = this.outputs.map {
-      case CommandOutputParameter(cop_id, _, _, _, _, _, Some(outputBinding), Some(tpe)) =>
-        val womType = tpe.fold(MyriadOutputTypeToWomType)
-        OutputDefinition(FullyQualifiedName(cop_id).id, womType, CommandOutputExpression(outputBinding, womType, inputNames))
+      val outputs: List[Callable.OutputDefinition] = this.outputs.map {
+        case CommandOutputParameter(cop_id, _, _, _, _, _, Some(outputBinding), Some(tpe)) =>
+          val womType = tpe.fold(MyriadOutputTypeToWomType)
+          OutputDefinition(FullyQualifiedName(cop_id).id, womType, CommandOutputExpression(outputBinding, womType, inputNames))
 
-      //This catches states where the output binding is not declared but the type is
-      case CommandOutputParameter(id, _, _, _, _, _, _, Some(tpe)) =>
-        val womType: WomType = tpe.fold(MyriadOutputTypeToWomType)
-        OutputDefinition(FullyQualifiedName(id).id, womType, InputLookupExpression(womType, id))
+        //This catches states where the output binding is not declared but the type is
+        case CommandOutputParameter(id, _, _, _, _, _, _, Some(tpe)) =>
+          val womType: WomType = tpe.fold(MyriadOutputTypeToWomType)
+          OutputDefinition(FullyQualifiedName(id).id, womType, InputLookupExpression(womType, id))
 
-      case other => throw new NotImplementedError(s"Command output parameters such as $other are not yet supported")
-    }.toList
-
-    val inputDefinitions: List[_ <: Callable.InputDefinition] =
-      this.inputs.map {
-        case CommandInputParameter(id, _, _, _, _, _, _, Some(default), Some(tpe)) =>
-          val inputType = tpe.fold(MyriadInputTypeToWomType)
-          val inputName = FullyQualifiedName(id).id
-          InputDefinitionWithDefault(inputName, inputType, ValueAsAnExpression(inputType.coerceRawValue(default.stringRepresentation).get))
-        case CommandInputParameter(id, _, _, _, _, _, _, None, Some(tpe)) =>
-          val inputType = tpe.fold(MyriadInputTypeToWomType)
-          val inputName = FullyQualifiedName(id).id
-          RequiredInputDefinition(inputName, inputType)
-        case other => throw new NotImplementedError(s"command input parameters such as $other are not yet supported")
+        case other => throw new NotImplementedError(s"Command output parameters such as $other are not yet supported")
       }.toList
+
+      val inputDefinitions: List[_ <: Callable.InputDefinition] =
+        this.inputs.map {
+          case CommandInputParameter(id, _, _, _, _, _, _, Some(default), Some(tpe)) =>
+            val inputType = tpe.fold(MyriadInputTypeToWomType)
+            val inputName = FullyQualifiedName(id).id
+            InputDefinitionWithDefault(inputName, inputType, ValueAsAnExpression(inputType.coerceRawValue(default.stringRepresentation).get))
+          case CommandInputParameter(id, _, _, _, _, _, _, None, Some(tpe)) =>
+            val inputType = tpe.fold(MyriadInputTypeToWomType)
+            val inputName = FullyQualifiedName(id).id
+            RequiredInputDefinition(inputName, inputType)
+          case other => throw new NotImplementedError(s"command input parameters such as $other are not yet supported")
+        }.toList
 
       def stringOrExpressionToString(soe: Option[StringOrExpression]): Option[String] = soe flatMap {
         case StringOrExpression.String(str) => Some(str)
