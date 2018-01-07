@@ -14,12 +14,13 @@ import cwl.CwlAny.EnhancedCwlAny
 import cwl.requirement.RequirementToAttributeMap
 import eu.timepit.refined.W
 import shapeless.syntax.singleton._
-import shapeless.{:+:, CNil, Coproduct, Witness}
+import shapeless.{:+:, CNil, Coproduct, Poly1, Witness}
 import wom.callable.Callable.{InputDefinitionWithDefault, OutputDefinition, RequiredInputDefinition}
 import wom.callable.{Callable, CallableTaskDefinition}
 import wom.executable.Executable
 import wom.expression.{InputLookupExpression, ValueAsAnExpression, WomExpression}
 import wom.types.WomType
+import wom.values.WomString
 import wom.{CommandPart, RuntimeAttributes}
 
 import scala.language.postfixOps
@@ -83,7 +84,51 @@ case class CommandLineTool private(
     requirement.fold(RequirementToAttributeMap).apply(inputNames)
   }
 
-  private def environmentDefs(requirementsAndHints: List[Requirement]): ErrorOr[List[EnvironmentDef]] = List.empty[EnvironmentDef].validNel
+  private def environmentDefs(requirementsAndHints: List[Requirement]): ErrorOr[List[EnvironmentDef]] = {
+    // For environment variables we need to make sure that we aren't being asked to evaluate expressions from a containing
+    // workflow step or its containing workflow or anything containing the workflow. The current structure of this code
+    // is not prepared to evaluate those expressions. Actually this is true for attributes too and we're totally not
+    // checking for this condition there. Blurgh.
+    // TODO CWL: for runtime attributes, at least detect expressions in containing steps and give some diagnostics.
+
+    // This traverses all `EnvironmentDef`s within all `EnvVarRequirement`s. The spec doesn't appear to say how to handle
+    // duplicate `envName` keys in a single array of `EnvironmentDef`s; this code gives precedence to the last occurrence.
+    val allEnvVarDefs = for {
+      req <- requirementsAndHints
+      envVarReq <- req.select[EnvVarRequirement].toList
+      envDef <- envVarReq.envDef.toList
+    } yield envDef
+
+    // Compact the `EnvironmentDef`s. Don't convert to `WomExpression`s yet, the `StringOrExpression`s need to be
+    // compared to the `EnvVarRequirement`s that were defined on this tool.
+    val effectiveEnvVarDefs = allEnvVarDefs.foldRight(Map.empty[String, StringOrExpression]) {
+      case (envVarReq, envVarMap) => envVarMap + (envVarReq.envName -> envVarReq.envValue)
+    }
+
+    val allEffectiveExpressionEnvironmentDefs = effectiveEnvVarDefs filter { case (_, expr) => expr.select[Expression].isDefined }
+    // The RHS gives all `Requirement`s defined on this tool. Includes both true "requirement" `Requirement`s
+    // and "hint" `Requirement`s.
+    val cltRequirements = requirements.toList.flatten ++ hints.toList.flatten.flatMap(_.select[Requirement])
+    val cltEnvironmentDefExpressions = (for {
+      cltEnvVarRequirement <- cltRequirements flatMap { _.select[EnvVarRequirement]}
+      cltEnvironmentDef <- cltEnvVarRequirement.envDef.toList
+      expr <- cltEnvironmentDef.envValue.select[Expression].toList
+    } yield expr).toSet
+
+    val unevaluatableEnvironmentDefs = for {
+      (name, stringOrExpression) <- allEffectiveExpressionEnvironmentDefs.toList
+      expression <- stringOrExpression.select[Expression].toList
+      if !cltEnvironmentDefExpressions.contains(expression)
+    } yield name
+
+    unevaluatableEnvironmentDefs match {
+      case Nil =>
+        // TODO CWL yeah needs a little work still
+        List.empty[EnvironmentDef].validNel
+      case xs =>
+        s"Could not evaluate environment variable expressions defined outside of tool $id: ${xs.mkString(", ")}.".invalidNel
+    }
+  }
 
   def buildTaskDefinition(validator: RequirementsValidator): ErrorOr[CallableTaskDefinition] = for {
     requirementsAndHints <- validateRequirementsAndHints(validator)
@@ -297,4 +342,14 @@ object CommandLineTool {
     dockerOutputDirectory = None
   )) } toList
 
+}
+
+object StringOrExpressionToWomExpression extends Poly1 {
+  implicit def string: Case.Aux[String, Set[String] => WomExpression] = at[String] { s =>
+    Function.const(ValueAsAnExpression(WomString(s)))
+  }
+
+  implicit def expression: Case.Aux[Expression, Set[String] => WomExpression] = at[Expression] { e => inputNames =>
+    cwl.JobPreparationExpression(e, inputNames)
+  }
 }
