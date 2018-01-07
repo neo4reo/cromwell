@@ -84,7 +84,7 @@ case class CommandLineTool private(
     requirement.fold(RequirementToAttributeMap).apply(inputNames)
   }
 
-  private def environmentDefs(requirementsAndHints: List[Requirement]): ErrorOr[List[EnvironmentDef]] = {
+  private def environmentDefs(requirementsAndHints: List[Requirement]): ErrorOr[Map[String, WomExpression]] = {
     // For environment variables we need to make sure that we aren't being asked to evaluate expressions from a containing
     // workflow step or its containing workflow or anything containing the workflow. The current structure of this code
     // is not prepared to evaluate those expressions. Actually this is true for attributes too and we're totally not
@@ -101,13 +101,15 @@ case class CommandLineTool private(
 
     // Compact the `EnvironmentDef`s. Don't convert to `WomExpression`s yet, the `StringOrExpression`s need to be
     // compared to the `EnvVarRequirement`s that were defined on this tool.
-    val effectiveEnvVarDefs = allEnvVarDefs.foldRight(Map.empty[String, StringOrExpression]) {
+    val effectiveEnvironmentDefs = allEnvVarDefs.foldRight(Map.empty[String, StringOrExpression]) {
       case (envVarReq, envVarMap) => envVarMap + (envVarReq.envName -> envVarReq.envValue)
     }
 
-    val allEffectiveExpressionEnvironmentDefs = effectiveEnvVarDefs filter { case (_, expr) => expr.select[Expression].isDefined }
-    // The RHS gives all `Requirement`s defined on this tool. Includes both true "requirement" `Requirement`s
-    // and "hint" `Requirement`s.
+    // These are the effective environment defs irrespective of where they were found in the
+    // Run / WorkflowStep / Workflow hierarchy.
+    val effectiveExpressionEnvironmentDefs = effectiveEnvironmentDefs filter { case (_, expr) => expr.select[Expression].isDefined }
+
+    // These are only the environment defs defined on this tool.
     val cltRequirements = requirements.toList.flatten ++ hints.toList.flatten.flatMap(_.select[Requirement])
     val cltEnvironmentDefExpressions = (for {
       cltEnvVarRequirement <- cltRequirements flatMap { _.select[EnvVarRequirement]}
@@ -115,18 +117,22 @@ case class CommandLineTool private(
       expr <- cltEnvironmentDef.envValue.select[Expression].toList
     } yield expr).toSet
 
+    // If there is an expression in an effective environment def that wasn't defined on this tool then error out since
+    // there isn't currently a way of evaluating it.
     val unevaluatableEnvironmentDefs = for {
-      (name, stringOrExpression) <- allEffectiveExpressionEnvironmentDefs.toList
+      (name, stringOrExpression) <- effectiveExpressionEnvironmentDefs.toList
       expression <- stringOrExpression.select[Expression].toList
       if !cltEnvironmentDefExpressions.contains(expression)
     } yield name
 
     unevaluatableEnvironmentDefs match {
       case Nil =>
-        // TODO CWL yeah needs a little work still
-        List.empty[EnvironmentDef].validNel
+        // No unevaluatable environment defs => keep on truckin'
+        effectiveEnvironmentDefs.foldRight(Map.empty[String, WomExpression]) { case ((envName, envValue), acc) =>
+          acc + (envName -> envValue.fold(StringOrExpressionToWomExpression).apply(inputNames))
+        }.validNel
       case xs =>
-        s"Could not evaluate environment variable expressions defined outside of tool $id: ${xs.mkString(", ")}.".invalidNel
+        s"Could not evaluate environment variable expressions defined in the call hierarchy of tool $id: ${xs.mkString(", ")}.".invalidNel
     }
   }
 
@@ -135,7 +141,7 @@ case class CommandLineTool private(
     environment <- environmentDefs(requirementsAndHints)
   } yield buildCallableTaskDefinition(requirementsAndHints, environment)
 
-  private def buildCallableTaskDefinition(requirementsAndHints: List[Requirement], environment: List[EnvironmentDef]) = {
+  private def buildCallableTaskDefinition(requirementsAndHints: List[Requirement], environmentVariables: Map[String, WomExpression]) = {
     val id = this.id
 
     val commandTemplate: Seq[CommandPart] = baseCommand.toSeq.flatMap(_.fold(BaseCommandToCommandParts)) ++
