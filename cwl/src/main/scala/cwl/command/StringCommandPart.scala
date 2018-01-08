@@ -2,6 +2,7 @@ package cwl.command
 
 import cats.syntax.validated._
 import common.validation.ErrorOr.ErrorOr
+import wom.CommandPart._
 import wom._
 import wom.callable.RuntimeEnvironment
 import wom.expression.IoFunctionSet
@@ -12,5 +13,6 @@ case class StringCommandPart(literal: String) extends CommandPart {
   override def instantiate(inputsMap: Map[LocalName, WomValue],
                            functions: IoFunctionSet,
                            valueMapper: (WomValue) => WomValue,
-                           runtimeEnvironment: RuntimeEnvironment): ErrorOr[InstantiatedCommand] = InstantiatedCommand('"' + literal + '"').validNel
+                           runtimeEnvironment: RuntimeEnvironment): ErrorOr[InstantiatedCommand] =
+    InstantiatedCommand(literal.quoteForShell).validNel
 }

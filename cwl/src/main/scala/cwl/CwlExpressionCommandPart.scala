@@ -6,14 +6,15 @@ import common.validation.Validation._
 import cwl.CommandLineTool.CommandInputParameter
 import cwl.command.ParentName
 import mouse.all._
+import wom.CommandPart._
 import wom.callable.RuntimeEnvironment
 import wom.expression.IoFunctionSet
 import wom.graph.LocalName
 import wom.values._
 import wom.{CommandPart, InstantiatedCommand}
 
-import scala.util.Try
 import scala.language.postfixOps
+import scala.util.Try
 
 case class CwlExpressionCommandPart(expr: Expression) extends CommandPart {
   override def instantiate(inputsMap: Map[LocalName, WomValue],
@@ -27,7 +28,7 @@ case class CwlExpressionCommandPart(expr: Expression) extends CommandPart {
         runtime = runtimeEnvironment.cwlMap
       ).withInputs(stringKeyMap, functions)
 
-    expr.fold(EvaluateExpression).apply(pc).toErrorOr.map(v => InstantiatedCommand('"' + v.valueString + '"'))
+    expr.fold(EvaluateExpression).apply(pc).toErrorOr.map(v => InstantiatedCommand(v.valueString.quoteForShell))
   }
 }
 
