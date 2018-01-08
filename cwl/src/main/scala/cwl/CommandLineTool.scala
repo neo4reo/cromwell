@@ -18,7 +18,7 @@ import wom.callable.Callable.{InputDefinitionWithDefault, OutputDefinition, Requ
 import wom.callable.{Callable, CallableTaskDefinition}
 import wom.executable.Executable
 import wom.expression.{ValueAsAnExpression, WomExpression}
-import wom.values.WomEvaluatedCallInputs
+import wom.values.{WomEvaluatedCallInputs, WomString}
 import wom.{CommandPart, RuntimeAttributes}
 
 import scala.language.postfixOps
@@ -118,6 +118,7 @@ case class CommandLineTool private(
         // Locate the value for this input parameter in the inputValue or fail
         inputValues
           .find(_._1.name == parsedName).map(_._2)
+          .orElse(inputParameter.default.map(_.stringRepresentation).map(WomString.apply))
           .toErrorOr(s"Could not find an input value for input $parsedName in ${inputValues.prettyString}") map { value =>
           
           // See http://www.commonwl.org/v1.0/CommandLineTool.html#Input_binding
