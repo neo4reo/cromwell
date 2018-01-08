@@ -7,6 +7,10 @@ import scala.util.{Success, Try}
 sealed trait WomFile extends WomValue {
   def value: String
 
+  def womFileType: WomFileType
+
+  final def womType: WomType = womFileType
+
   override def valueString = value
 
   /**
@@ -64,7 +68,7 @@ sealed trait WomPrimitiveFile extends WomFile with WomPrimitive
   * @param value The location of the directory, possibly in the cloud.
   */
 final case class WomUnlistedDirectory(value: String) extends WomPrimitiveFile {
-  override val womType: WomType = WomUnlistedDirectoryType
+  override val womFileType: WomFileType = WomUnlistedDirectoryType
 
   override def toWomString = s""""$value""""
 
@@ -92,7 +96,7 @@ final case class WomUnlistedDirectory(value: String) extends WomPrimitiveFile {
   * @param value The location of the file, possibly in the cloud.
   */
 final case class WomSingleFile(value: String) extends WomPrimitiveFile {
-  override val womType: WomType = WomSingleFileType
+  override val womFileType: WomFileType = WomSingleFileType
 
   override def toWomString = s""""$value""""
 
@@ -125,7 +129,7 @@ final case class WomSingleFile(value: String) extends WomPrimitiveFile {
   * @param value The path of the glob within the container.
   */
 final case class WomGlobFile(value: String) extends WomPrimitiveFile {
-  override val womType: WomType = WomGlobFileType
+  override val womFileType: WomFileType = WomGlobFileType
 
   override def toWomString = s"""glob("$value")"""
 
@@ -158,7 +162,7 @@ final case class WomMaybeListedDirectory(valueOption: Option[String] = None,
     valueOption.getOrElse(throw new UnsupportedOperationException(s"value is not available: $this"))
   }
 
-  override val womType: WomType = WomMaybeListedDirectoryType
+  override val womFileType: WomFileType = WomMaybeListedDirectoryType
 
   // TODO: WOM: WOMFILE: This isn't even close to a WDL representation (and maybe belongs in WDL?) of this class, but w/o it other areas of the code crash
   override def toWomString = s""""$value""""
@@ -192,7 +196,7 @@ final case class WomMaybePopulatedFile(valueOption: Option[String] = None,
     valueOption.getOrElse(throw new UnsupportedOperationException(s"value is not available: $this"))
   }
 
-  override val womType: WomType = WomMaybePopulatedFileType
+  override val womFileType: WomFileType = WomMaybePopulatedFileType
 
   // TODO: WOM: WOMFILE: This isn't even close to a WDL representation (and maybe belongs in WDL?) of this class, but w/o it other areas of the code crash
   override def toWomString = s""""$value""""

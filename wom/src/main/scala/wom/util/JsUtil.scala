@@ -2,45 +2,79 @@ package wom.util
 
 import javax.script.{ScriptContext, SimpleScriptContext}
 
-import jdk.nashorn.api.scripting.{ClassFilter, NashornScriptEngineFactory, ScriptObjectMirror}
-import wom.types._
+import common.validation.ErrorOr._
+import common.validation.Validation._
+import jdk.nashorn.api.scripting.{ClassFilter, NashornScriptEngineFactory}
 import wom.values._
 
 import scala.collection.JavaConverters._
 
 object JsUtil {
-
   /**
-    * Evaluates a javascript expression.
+    * Evaluates a javascript expression using WOM values.
     *
-    * Inputs, and returned output must be one of:
-    * - WomString
-    * - WomBoolean
-    * - WomFloat
-    * - WomInteger
-    * - WomMap
-    * - WomArray
-    * - A "WomNull" equal to WomOptionalValue(WomNothingType, None)
-    *
-    * The WomMap keys and values, and WomArray elements must be the one of the above, recursively.
-    *
-    * Instances of WomFile are not permitted, and must be already converted to one of the above types.
-    *
-    * @param expr   The javascript expression.
-    * @param values A map filled with WOM values.
+    * @param expr    The javascript expression.
+    * @param values  A map filled with WOM values.
+    * @param encoder Encodes wom values to javascript.
+    * @param decoder Decodes wom values from javascript.
     * @return The result of the expression.
     */
-  def eval(expr: String, values: Map[String, WomValue] = Map.empty): WomValue = {
-    val engine = ScriptEngineFactory.getScriptEngine(nashornStrictArgs, getNashornClassLoader, noJavaClassFilter)
+  def eval(expr: String,
+           values: Map[String, WomValue] = Map.empty,
+           encoder: JsEncoder = new JsEncoder,
+           decoder: JsDecoder = new JsDecoder): ErrorOr[WomValue] = {
+    for {
+      javaScriptValues <- values.traverseValues(encoder.encode)
+      result <- evalRaw(expr, javaScriptValues.asJava)
+      decoded <- decoder.decode(result)
+    } yield decoded
+  }
 
-    val bindings = engine.createBindings()
-    val javascriptValues = values.mapValues(toJavascript).asJava
-    bindings.asInstanceOf[java.util.Map[String, Any]].putAll(javascriptValues)
+  /**
+    * Evaluates a javascript expression using maps of WOM values.
+    *
+    * TODO: Once custom types are supported as WomValue, this custom method won't be required.
+    *
+    * @param expr      The javascript expression.
+    * @param rawValues A map filled with WOM values.
+    * @param mapValues A map of maps filled with WOM values of various types.
+    * @param encoder   Encodes wom values to javascript.
+    * @param decoder   Decodes wom values from javascript.
+    * @return The result of the expression.
+    */
+  def evalStructish(expr: String,
+                    rawValues: Map[String, WomValue] = Map.empty,
+                    mapValues: Map[String, Map[String, WomValue]] = Map.empty,
+                    encoder: JsEncoder = new JsEncoder,
+                    decoder: JsDecoder = new JsDecoder): ErrorOr[WomValue] = {
+    for {
+      rawJavaScriptValues <- rawValues.traverseValues(encoder.encode)
+      mapJavaScriptValues <- mapValues
+        .mapValues(_.traverseValues(encoder.encode).map(JsMap))
+        .traverseValues(identity)
+      javaScriptValues = rawJavaScriptValues ++ mapJavaScriptValues
+      result <- evalRaw(expr, javaScriptValues.asJava)
+      decoded <- decoder.decode(result)
+    } yield decoded
+  }
 
-    val context = new SimpleScriptContext
-    context.setBindings(bindings, ScriptContext.ENGINE_SCOPE)
-    val result = engine.eval(expr, context)
-    fromJavascript(result)
+  /**
+    * Evaluates a javascript expression using raw javascript compatible values.
+    *
+    * @param expr   The javascript expression.
+    * @param values A map filled with javascript compatible values.
+    * @return The result of the expression.
+    */
+  def evalRaw(expr: String, values: java.util.Map[String, AnyRef]): ErrorOr[AnyRef] = {
+    validate {
+      val engine = ScriptEngineFactory.getScriptEngine(nashornStrictArgs, getNashornClassLoader, noJavaClassFilter)
+      val bindings = engine.createBindings()
+      bindings.asInstanceOf[java.util.Map[String, Any]].putAll(values)
+
+      val context = new SimpleScriptContext
+      context.setBindings(bindings, ScriptContext.ENGINE_SCOPE)
+      engine.eval(expr, context)
+    }
   }
 
   private val ScriptEngineFactory = new NashornScriptEngineFactory
@@ -69,73 +103,6 @@ object JsUtil {
     //private val noJavaClassFilter: ClassFilter = _ => false
     new ClassFilter {
       override def exposeToScripts(unused: String): Boolean = false
-    }
-  }
-
-  /**
-    * Converts a WomPrimitive (except WomFile) into a javascript compatible value.
-    *
-    * Inputs, and returned output must be one of:
-    * - WomString
-    * - WomBoolean
-    * - WomFloat
-    * - WomInteger
-    * - WomMap
-    * - WomArray
-    * - A "WomNull" equal to WomOptionalValue(WomNothingType, None)
-    *
-    * The WomMap keys and values, and WomArray elements must be the one of the above, recursively.
-    *
-    * Instances of WomFile are not permitted, and must be already converted to one of the above types.
-    *
-    * @param value A WOM value.
-    * @return The javascript equivalent.
-    */
-  private def toJavascript(value: WomValue): AnyRef = {
-    value match {
-      case WomOptionalValue(WomNothingType, None) => null
-      case WomString(string) => string
-      case WomInteger(int) => int.asInstanceOf[java.lang.Integer]
-      case WomFloat(double) => double.asInstanceOf[java.lang.Double]
-      case WomBoolean(boolean) => boolean.asInstanceOf[java.lang.Boolean]
-      case WomArray(_, array) => array.map(toJavascript).toArray
-      case WomMap(_, map) =>
-        map.map({
-          case (mapKey, mapValue) => toJavascript(mapKey) -> toJavascript(mapValue)
-        }).asJava
-      case _ => throw new IllegalArgumentException(s"Unexpected value: $value")
-    }
-  }
-
-  private def fromJavascript(value: AnyRef): WomValue = {
-    def isWhole(d: Double) = (d == Math.floor(d)) && !java.lang.Double.isInfinite(d)
-    value match {
-      case null => WomOptionalValue(WomNothingType, None)
-      case string: String => WomString(string)
-      case int: java.lang.Integer => WomInteger(int)
-      case int: java.lang.Double if isWhole(int) => WomInteger(int.intValue()) // Because numbers in nashorn come back as 'Double's
-      case double: java.lang.Double => WomFloat(double)
-      case boolean: java.lang.Boolean => WomBoolean(boolean)
-      case scriptObjectMirror: ScriptObjectMirror if scriptObjectMirror.isArray =>
-        val womValues = (0 until scriptObjectMirror.size).toArray map { index =>
-          fromJavascript(scriptObjectMirror.getSlot(index))
-        }
-        val womArrayType = if (womValues.isEmpty) WomArrayType(WomNothingType) else WomArrayType(womValues.head.womType)
-        WomArray(womArrayType, womValues)
-      case scriptObjectMirror: ScriptObjectMirror if scriptObjectMirror.isFunction =>
-        throw new IllegalArgumentException(s"Unexpected function value: $value")
-      case scriptObjectMirror: ScriptObjectMirror =>
-        val keys = scriptObjectMirror.getOwnKeys(true)
-        val womMap: Map[WomString, WomValue] = keys.map(key =>
-          WomString(key) -> fromJavascript(scriptObjectMirror.get(key))
-        ).toMap
-        val womValues = womMap.values
-        val womValueType = if (womValues.isEmpty) WomArrayType(WomNothingType) else WomArrayType(womValues.head.womType)
-        val womMapType = WomMapType(WomStringType, womValueType)
-        WomMap(womMapType, keys.map(key =>
-          WomString(key) -> fromJavascript(scriptObjectMirror.get(key))
-        ).toMap)
-      case _ => throw new IllegalArgumentException(s"Unexpected value: $value")
     }
   }
 }

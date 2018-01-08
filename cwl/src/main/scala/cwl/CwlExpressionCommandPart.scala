@@ -12,9 +12,6 @@ import wom.graph.LocalName
 import wom.values._
 import wom.{CommandPart, InstantiatedCommand}
 
-import scala.language.postfixOps
-import scala.util.Try
-
 case class CwlExpressionCommandPart(expr: Expression) extends CommandPart {
   override def instantiate(inputsMap: Map[LocalName, WomValue],
                            functions: IoFunctionSet,
@@ -24,10 +21,12 @@ case class CwlExpressionCommandPart(expr: Expression) extends CommandPart {
 
     val pc =
       ParameterContext(
-        runtime = runtimeEnvironment.cwlMap
-      ).withInputs(stringKeyMap, functions)
+        inputs = stringKeyMap, runtime = runtimeEnvironment.cwlMap
+      )
 
-    expr.fold(EvaluateExpression).apply(pc).toErrorOr.map(v => InstantiatedCommand(v.valueString))
+    ExpressionEvaluator.eval(expr, pc) map { womValue =>
+      InstantiatedCommand(womValue.valueString)
+    }
   }
 }
 
@@ -37,21 +36,25 @@ case class CommandLineBindingCommandPart(argument: CommandLineBinding) extends C
                            functions: IoFunctionSet,
                            valueMapper: (WomValue) => WomValue,
                            runtimeEnvironment: RuntimeEnvironment): ErrorOr[InstantiatedCommand] = {
-    val pc = ParameterContext(runtime = runtimeEnvironment.cwlMap).withInputs(inputsMap.map({
-      case (LocalName(localName), sf: WomSingleFile) => localName -> valueMapper(sf)
-      case (LocalName(localName), value) => localName -> value
-    }), functions)
 
-    val womValue: ErrorOr[WomValue] = argument match {
+    val stringInputsMap = inputsMap map {
+
+      case (LocalName(localName), value) => localName -> valueMapper(value)
+    }
+    val pc = ParameterContext(inputs = stringInputsMap, runtime = runtimeEnvironment.cwlMap)
+
+    val womValueErrorOr: ErrorOr[WomValue] = argument match {
       case CommandLineBinding(_, _, _, _, _, Some(StringOrExpression.Expression(expression)), Some(false)) =>
-        expression.fold(EvaluateExpression).apply(pc).map(valueMapper).toErrorOr
+        ExpressionEvaluator.eval(expression, pc) map valueMapper
       case CommandLineBinding(_, _, _, _, _, Some(StringOrExpression.String(string)), Some(false)) =>
-        WomString(string).validNel
+        WomString(string).valid
       // There's a fair few other cases to add, but until then...
       case other => s"As-yet-unsupported command line binding: $other".invalidNel
     }
 
-    womValue.map(v => InstantiatedCommand(v.valueString))
+    womValueErrorOr map { womValue =>
+      InstantiatedCommand(womValue.valueString)
+    }
   }
 }
 
@@ -61,7 +64,7 @@ case class InputParameterCommandPart(commandInputParameter: CommandInputParamete
                            functions: IoFunctionSet,
                            valueMapper: (WomValue) => WomValue,
                            runtimeEnvironment: RuntimeEnvironment) =
-    Try {
+    validate {
       val womValue: WomValue = commandInputParameter match {
         case cip: CommandInputParameter =>
           val localizedId = LocalName(FullyQualifiedName(cip.id).id)
@@ -72,5 +75,5 @@ case class InputParameterCommandPart(commandInputParameter: CommandInputParamete
         case other => throw new NotImplementedError(s"As-yet-unsupported commandPart from command input parameters: $other")
       }
       InstantiatedCommand(womValue.valueString)
-    } toErrorOr
+    }
 }

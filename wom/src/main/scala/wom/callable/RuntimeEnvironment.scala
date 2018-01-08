@@ -1,7 +1,6 @@
 package wom.callable
 
-import wom.types.{WomMapType, WomStringType}
-import wom.values.{WomMap, WomString, WomValue}
+import wom.values.{WomFloat, WomInteger, WomString, WomValue}
 
 /**
   * Parameter documentation quoted from CWL Spec.
@@ -20,20 +19,14 @@ case class RuntimeEnvironment(outputPath: String,
                               outputPathSize: Long,
                               tempPathSize: Long) {
 
-  def cwlMap: WomValue = {
-
-    val womMap: Map[WomValue, WomValue] = Map(
-      "outdir" -> outputPath,
-      "tmpdir" -> tempPath,
-      "cores" -> cores.toString,
-      "ram" -> ram.toString,
-      "outdirSize" -> outputPathSize.toString,
-      "tmpdirSize" -> tempPathSize.toString
-    ).map{
-      case (key, value) => WomString(key) -> WomString(value)
-    }
-
-    WomMap(WomMapType(WomStringType, WomStringType), womMap)
+  def cwlMap: Map[String, WomValue] = {
+    Map(
+      "outdir" -> WomString(outputPath),
+      "tmpdir" -> WomString(tempPath),
+      "cores" -> WomInteger(cores),
+      "ram" -> WomFloat(ram),
+      "outdirSize" -> WomFloat(outputPathSize.toDouble),
+      "tmpdirSize" -> WomFloat(tempPathSize.toDouble)
+    )
   }
 }
-

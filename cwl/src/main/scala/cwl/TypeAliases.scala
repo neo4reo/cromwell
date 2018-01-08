@@ -1,15 +1,21 @@
 package cwl
 
 import cwl.CommandLineTool._
-import shapeless.{:+:, CNil}
 import cwl.CwlType.CwlType
+import cwl.ExpressionEvaluator.{ECMAScriptExpression, ECMAScriptFunction}
 import io.circe.Json
+import shapeless.{:+:, CNil}
 import wom.types.WomType
 
 trait TypeAliases {
 
+  type Expression = ECMAScriptExpression :+: ECMAScriptFunction :+: CNil
+
+  type StringOrExpression = Expression :+: String :+: CNil
+
   type CwlAny =
-    File :+:
+    FileOrDirectory :+:
+      Array[FileOrDirectory] :+:
       Json :+:
       CNil
 
@@ -37,15 +43,15 @@ trait TypeAliases {
 
   // TODO WOM: Record Schema as well as Directories are not included because they're not supported yet, although they should eventually be.
   // Removing them saves some compile time when building decoders for this type (in CwlInputParsing)
-  type MyriadInputValuePrimitives = 
+  type MyriadInputValuePrimitives =
     String :+:
-    Int :+:
-    Long :+:
-    File :+:
-    Float :+:
-    Double :+:
-    Boolean :+:
-    CNil
+      Int :+:
+      Long :+:
+      FileOrDirectory :+:
+      Float :+:
+      Double :+:
+      Boolean :+:
+      CNil
 
   type MyriadInputValue =
     MyriadInputValuePrimitives :+:
@@ -79,30 +85,29 @@ trait TypeAliases {
       CNil
 
   type MyriadCommandInputType =
+    MyriadCommandInnerType :+:
+      Array[MyriadCommandInnerType] :+:
+      CNil
+
+  type MyriadCommandInnerType =
     CwlType :+:
       CommandInputRecordSchema :+:
       CommandInputEnumSchema :+:
       CommandInputArraySchema :+:
       String :+:
-      Array[
-        CwlType  :+:
-          CommandInputRecordSchema :+:
-          CommandInputEnumSchema :+:
-          CommandInputArraySchema :+:
-          String :+:
-          CNil
-        ] :+:
       CNil
   
-  type ScatterVariables = Option[String :+: Array[String] :+: CNil]
-  
   type ResourceRequirementType = Long :+: Expression :+: String :+: CNil
-}
 
-object CwlAny {
-  implicit class EnhancedCwlAny(val cwlAny: CwlAny) extends AnyVal {
-    def stringRepresentation: String = cwlAny.select[Json] map { json => json.asString.getOrElse(json.toString) } getOrElse "CwlAny (not Json)"
-  }
+  type SingleOrArrayOfStrings = String :+: Array[String] :+: CNil
+
+  type ScatterVariables = Option[SingleOrArrayOfStrings]
+
+  type FileOrDirectory = File :+: Directory :+: CNil
+
+  type Glob = StringOrExpression :+: Array[String] :+: CNil
+
+  type SecondaryFiles = StringOrExpression :+: Array[StringOrExpression] :+: CNil
 }
 
 object MyriadInputType {
