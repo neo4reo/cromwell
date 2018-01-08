@@ -108,9 +108,8 @@ object CwlAny {
     def sprayJsonRepresentation: JsValue = json.toString().parseJson
   }
 
-  object Json {
-    def unapply(cwlAny: CwlAny): Option[Json] = cwlAny.select[Json]
-  }
+  object Json { def unapply(cwlAny: CwlAny): Option[Json] = cwlAny.select[Json] }
+  object File { def unapply(cwlAny: CwlAny): Option[File] = cwlAny.select[File] }
 }
 
 object MyriadInputType {

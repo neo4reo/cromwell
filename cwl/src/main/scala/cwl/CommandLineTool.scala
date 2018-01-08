@@ -133,6 +133,10 @@ case class CommandLineTool private(
           val inputType = tpe.fold(MyriadInputTypeToWomType)
           val inputName = FullyQualifiedName(id).id
           InputDefinitionWithDefault(inputName, inputType, ValueAsAnExpression(inputType.coerceRawValue(default.sprayJsonRepresentation).get))
+        case CommandInputParameter(id, _, _, _, _, _, _, Some(CwlAny.File(default)), Some(tpe)) =>
+          val inputType = tpe.fold(MyriadInputTypeToWomType)
+          val inputName = FullyQualifiedName(id).id
+          InputDefinitionWithDefault(inputName, inputType, ValueAsAnExpression(inputType.coerceRawValue(default.path.get).get))
         case CommandInputParameter(id, _, _, _, _, _, _, None, Some(tpe)) =>
           val inputType = tpe.fold(MyriadInputTypeToWomType)
           val inputName = FullyQualifiedName(id).id
