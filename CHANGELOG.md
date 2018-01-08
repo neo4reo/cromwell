@@ -1,5 +1,14 @@
 # Cromwell Change Log
 
+## 30.2 Release Notes
+
+* **API**
+    + Updated the `/query` response to include the total number of query results returned. See [here](http://cromwell.readthedocs.io/en/develop/api/RESTAPI/#workflowqueryresponse) for more information.
+
+## 30.1 Release Notes
+
+* A set of bug fixes following the migration of Cromwell to WOM (the Workflow Object Model) in version 30.
+
 ## 30 Release Notes
 
 ### Breaking changes
