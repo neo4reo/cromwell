@@ -27,7 +27,7 @@ case class CwlExpressionCommandPart(expr: Expression) extends CommandPart {
         runtime = runtimeEnvironment.cwlMap
       ).withInputs(stringKeyMap, functions)
 
-    expr.fold(EvaluateExpression).apply(pc).toErrorOr.map(v => InstantiatedCommand(v.valueString))
+    expr.fold(EvaluateExpression).apply(pc).toErrorOr.map(v => InstantiatedCommand('"' + v.valueString + '"'))
   }
 }
 
