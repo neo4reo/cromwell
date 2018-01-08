@@ -141,7 +141,7 @@ case class CommandLineTool private(
     environment <- environmentDefs(requirementsAndHints)
   } yield buildCallableTaskDefinition(requirementsAndHints, environment)
 
-  private def buildCallableTaskDefinition(requirementsAndHints: List[Requirement], environmentVariables: Map[String, WomExpression]) = {
+  private def buildCallableTaskDefinition(requirementsAndHints: List[Requirement], environmentExpressions: Map[String, WomExpression]) = {
     val id = this.id
 
     val commandTemplate: Seq[CommandPart] = baseCommand.toSeq.flatMap(_.fold(BaseCommandToCommandParts)) ++
@@ -228,7 +228,8 @@ case class CommandLineTool private(
       commandPartSeparator = " ",
       stdoutRedirection = stringOrExpressionToString(stdout),
       stderrRedirection = stringOrExpressionToString(stderr),
-      adHocFileCreation = adHocFileCreations
+      adHocFileCreation = adHocFileCreations,
+      environmentExpressions = environmentExpressions
     )
   }
 

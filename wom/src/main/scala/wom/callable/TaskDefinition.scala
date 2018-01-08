@@ -24,6 +24,7 @@ sealed trait TaskDefinition extends Callable {
   def stdoutRedirection: Option[String]
   def stderrRedirection: Option[String]
   def adHocFileCreation: Set[WomExpression]
+  def environmentExpressions: Map[String, WomExpression]
 
   lazy val unqualifiedName: LocallyQualifiedName = name
 
@@ -64,6 +65,7 @@ final case class CallableTaskDefinition(name: String,
                                         outputs: List[Callable.OutputDefinition],
                                         inputs: List[_ <: Callable.InputDefinition],
                                         adHocFileCreation: Set[WomExpression],
+                                        environmentExpressions: Map[String, WomExpression],
                                         prefixSeparator: String = ".",
                                         commandPartSeparator: String = "",
                                         stdoutRedirection: Option[String] = None,
@@ -90,6 +92,7 @@ final case class ExecutableTaskDefinition private (callableTaskDefinition: Calla
   override def stdoutRedirection = callableTaskDefinition.stdoutRedirection
   override def stderrRedirection = callableTaskDefinition.stderrRedirection
   override def adHocFileCreation = callableTaskDefinition.adHocFileCreation
+  override def environmentExpressions = callableTaskDefinition.environmentExpressions
 }
 
 object ExecutableTaskDefinition {
