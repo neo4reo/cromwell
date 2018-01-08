@@ -31,6 +31,6 @@ trait WriteFunctions extends IoFunctionSet with AsyncIoFunctions {
     val source = _writeDirectory.root / pathFrom
     val destination = _writeDirectory / targetName
 
-    asyncIo.copyAsync(source, destination) map { _ => WomSingleFile(destination.pathAsString) }
+    asyncIo.copyAsync(source, destination) as { _ => WomSingleFile(destination.pathAsString) }
   }
 }

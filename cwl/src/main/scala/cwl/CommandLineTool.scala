@@ -129,14 +129,14 @@ case class CommandLineTool private(
 
     val inputDefinitions: List[_ <: Callable.InputDefinition] =
       this.inputs.map {
-        case CommandInputParameter(id, _, _, _, _, _, _, Some(CwlAny.Json(default)), Some(tpe)) =>
+        case CommandInputParameter(id, _, _, _, _, _, _, Some(default), Some(tpe)) =>
           val inputType = tpe.fold(MyriadInputTypeToWomType)
           val inputName = FullyQualifiedName(id).id
-          InputDefinitionWithDefault(inputName, inputType, ValueAsAnExpression(inputType.coerceRawValue(default.sprayJsonRepresentation).get))
-        case CommandInputParameter(id, _, _, _, _, _, _, Some(CwlAny.File(default)), Some(tpe)) =>
-          val inputType = tpe.fold(MyriadInputTypeToWomType)
-          val inputName = FullyQualifiedName(id).id
-          InputDefinitionWithDefault(inputName, inputType, ValueAsAnExpression(inputType.coerceRawValue(default.path.get).get))
+          val defaultValue = default match {
+            case CwlAny.Json(jsonDefault) => ValueAsAnExpression(inputType.coerceRawValue(jsonDefault.sprayJsonRepresentation).get)
+            case CwlAny.File(fileDefault) => ValueAsAnExpression(inputType.coerceRawValue(fileDefault.path.get).get)
+          }
+          InputDefinitionWithDefault(inputName, inputType, defaultValue)
         case CommandInputParameter(id, _, _, _, _, _, _, None, Some(tpe)) =>
           val inputType = tpe.fold(MyriadInputTypeToWomType)
           val inputName = FullyQualifiedName(id).id

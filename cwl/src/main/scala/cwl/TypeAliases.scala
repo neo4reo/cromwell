@@ -105,7 +105,7 @@ object CwlAny {
 
   implicit class EnhancedJson(val json: Json) extends AnyVal {
     // Yes, urgh! This is disgusting but until we rewrite the entire JS coercion set for circe...
-    def sprayJsonRepresentation: JsValue = json.toString().parseJson
+    def sprayJsonRepresentation: JsValue = json.noSpaces.parseJson
   }
 
   object Json { def unapply(cwlAny: CwlAny): Option[Json] = cwlAny.select[Json] }

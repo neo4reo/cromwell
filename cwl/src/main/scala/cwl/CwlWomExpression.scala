@@ -129,11 +129,6 @@ final case class InitialWorkDirFileGeneratorExpression(entry: IwdrListingArrayEn
       case other => WomStringType.coerceRawValue(other).map(_.asInstanceOf[WomString].value).toErrorOr
     }
 
-    def mustBeFileArray(womValue: WomValue): ErrorOr[Seq[WomFile]] = womValue match {
-      case WomArray(WomArrayType(WomSingleFileType), value) => value.collect({case f: WomFile => f}).validNel
-      case other => WomArrayType(WomSingleFileType).coerceRawValue(other).map(_.asInstanceOf[WomArray]).toErrorOr.flatMap(mustBeFileArray)
-    }
-
     def evaluateEntryName(stringOrExpression: StringOrExpression): ErrorOr[String] = stringOrExpression match {
       case StringOrExpression.String(s) => s.validNel
       case StringOrExpression.ECMAScriptExpression(entrynameExpression) => for {
